@@ -1,0 +1,19 @@
+{
+  "name": "ai-final",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "slidev build",
+    "dev": "slidev --open",
+    "export": "slidev export"
+  },
+  "dependencies": {
+    "@slidev/cli": "^0.43.13",
+    "@slidev/theme-apple-basic": "^0.20.0",
+    "@slidev/theme-default": "latest",
+    "@slidev/theme-seriph": "latest",
+    "slidev-theme-eloc": "^1.0.2",
+    "slidev-theme-geist": "^0.8.1",
+    "slidev-theme-prussianblue": "^0.0.7"
+  }
+}
