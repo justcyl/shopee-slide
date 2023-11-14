@@ -140,32 +140,31 @@ G \rightarrow
 
 $$
 
+> 一个超参数$\lambda$来控制所有层的梯度计算，需要改进。
 ---
 
 # 图像处理模型 NFNet
 ## 
 
-2. **AGC算法**：记 $𝑊^𝑙∈ℝ^(𝑁×𝑀) $ 为第 $l$ 层的权重矩阵，�^�∈ ℝ^(𝑁×𝑀)为对应于�^� 的梯度矩阵，‖·‖_� 表示Frobenius范数，则有：
+2. **AGC算法**：记 $W^l \in \mathbb{R}^{N*M}$ 为第 $l$ 层的权重矩阵, $G^l \in \matbb{R}^{N*M}$为对应于$W^l$的梯度矩阵，$\| \cdot \|_F$ 表示 Frobenius 范数, 则有
 
 
 $$
 
-G \rightarrow
-    \begin{cases}
-    
-    \lambda \frac{G}{\|G\|}& \text{if $\|G\| > \lambda$}, \\
-    G & \text{otherwise.}
-    \end{cases}
+\|W^\ell\|_F=\sqrt{\sum_{i=1}^N\sum_{j=1}^M(W_{i,j}^\ell)^2}
 
 $$
 
+<br>
+
+定义第 $l$ 层上第 $i$ 个单元的梯度矩阵为$G_i^l$  （表示 $G^l$ 的第 $i$ 行），$\lambda$是一个超参数，$\| W_i \|_F^*=\max (\| W_i \|_F, \epsilon)$ ， $\epsilon$ 默认为 $10^{-3}$ ，AGC算法的裁剪公式为：
+
+$$G_i^\ell\to\begin{cases}\lambda\frac{\|W_i^\ell\|_F^\star}{\|G_i^\ell\|_F}G_i^\ell,&\mathrm{if~}\frac{\|G_i^\ell\|_F}{\|W_i^\ell\|_F^\star}>\lambda,\\G_i^\ell,&\mathrm{otherwise}.\end{cases}$$
 
 ---
 
 # 文本处理模型 Sentence-BERT
-## 
-
-Problem:大部分预训练模型获得的句向量不具有语义信息。（两个相似的句子得到的句向量可能会有很大差别）
+大部分预训练模型获得的句向量不具有语义信息。（两个相似的句子得到的句向量可能会有很大差别）
 
 <br>
 
@@ -173,7 +172,7 @@ SBERT对预训练的BERT进行修改：
 1. 使用（Siamese）和三级（triplet）网络结构来获得语义上有意义的句子嵌入，以此获得定长的句子嵌入；
 2. 使用余弦相似度或曼哈顿距离等寻找语义相似的句子。
 
-<img src="/image-24.png" style="height:50%; margin: auto; display: block;" />
+<img src="/image-36.png" style="height:50%; margin: auto; display: block;" />
 
 ---
 
@@ -353,7 +352,7 @@ layout: two-cols-header
 > 使用 chisel 后，  0.739 ➡️ 0.759 <br>
 > 使用 Neighborhood Blendingneig 后，由银牌区➡️前10名
 * 使用决策树也是另一种优秀的融合策略。
-> 前几名部分的开源方案用了 LightGBN, XGBoost 等方法替代并集融合。
+> 前几名部分的开源方案用了 LightGBM, XGBoost 等方法替代并集融合。
 * 数据集较为嘈杂是限制 f1 分数的一个重要因素。
 > "...noisy data is expected as that is the real situation in E-commerce since sellers have their own method of marketing, naming and promoting their products."
 > ![Alt text](/image-33.png)
