@@ -58,7 +58,7 @@ mdc: true
 ## 
 
 
-在baseline中， 我们采用 TFIDF 提取文本特征， ResNet18 提取图片特征.
+在 baseline 中， 我们采用 TFIDF 提取文本特征， ResNet18 提取图片特征.
 
 
 然后获取余弦相似值小于阈值的匹配，将文本得到的匹配和图像得到的匹配通过取并集的方式相接.
@@ -79,23 +79,19 @@ baseline中未使用到给出的训练数据，预训练的参数不能很好地
 
 ![softmax](/image-14.png)
 
----
 
+
+---
 
 # 开放集合目标检测
 ## 
 
-根据其他参赛者的分析，我们得出此次比赛属于**开集检测**，即测试集的 label_group 大多没有出现在训练集中.
+对于 softmax 损失, 有两个缺点：
+1. 最后一个全连接层的维度随着训练集目标的分类的增多而线性增加.
+2. 学习的特征对于闭集问题 (也就是训练集) 是分开的，但是对于开集 (测试集，与训练集身份没有交集) 的数据识别，学习到的**特征判别性**不够强.
 
+Tirplet-loss 则直接在度量空间学习，并引入 margin 的概念.
 
-虽然大部分 label_group 不在训练集中， 但可以利用训练集增大不同大类（如衣服，食物，家具）之间的距离.
-
-
-
-优点：稳定、表现好
-
-
-缺点：耗时长
 
 ![triple-loss](/image-8.png)
 
@@ -109,12 +105,16 @@ Triplet-loss 针对 **sample-to-sample** 距离的差异化，但本次比赛训
 
 
 Arcface 则针对 **sample-to-class** 距离的差异化，有以下优点：
-1. 能够有大量的图像比较（图与图，或者图与类）；
-2. 有边界的概念；
-3. 系统支持大规模训练
+1. 能够有大量的图像比较（图片与图片，或者图片与类）；
+2. 有边界 margin 的概念；
+3. 系统支持大规模训练，最后一个全连接层的权重取决于大类的数量.
 
 
 ![arcface](/image-6.png)
+
+<!--
+10000 小类 -》 100大类（衣服，食物）
+-->
 
 ---
 
@@ -141,12 +141,24 @@ G \rightarrow
 $$
 
 > 一个超参数$\lambda$来控制所有层的梯度计算，需要改进.
+
+<!--
+深度学习中，随着深度的增加，可能会出现梯度消失和梯度爆炸以及训练不稳定等问题，所以在NFNet之前，网络结构中都会有一个Batch Normalization层用以防止这些问题，但Batch Normalization层增大的计算成本，所以NFNet，用另外一种方式取代了原先Batch Normalization的角色
+
+
+
+深度学习中，随着深度的增加，可能会出现梯度消失和梯度爆炸以及训练不稳定等问题，所以在NFNet之前，网络结构中都会有一个Batch Normalization层用以防止这些问题，但Batch Normalization层增大的计算成本，所以NFNet，用另外一种方式取代了原先Batch Normalization的角色，即自适应梯度裁剪模块，这是一种基于逐单元梯度范数与参数范数的单位比例来裁剪梯度的算法，采用这种算法即AGC（Adaptive Gradient Clipping）算法，可以允许NFNet以大的批尺寸和强数据增强条件进行训练。
+
+1. 这是最基础的梯度裁剪算法，它只考虑了梯度的范数，那么存在一个问题：对于一个具有多层的网络结构来说，用一个超参数$\lambda$来控制所有层的梯度计算，显然效果不会多好，为每一层都配置一个超参数又不现实，那么我们怎么才能让这个超参数尽可能地放之四海而皆准呢，NFNet给出了一个可能的答案，即AGC算法
+1. 相较于经典的梯度裁剪算法，AGC引入了一个新的量，即权值矩阵的Frobenius范数，也就是这个矩阵内所有元素的平方平均数，通过引入这个量，当计算出来的梯度范数与权值矩阵范数之比大于超参数$\lambda$时，即$\frac{||G_i^l||_F}{||W^l_i||_F^*}>\lambda$，显然，在该情况下我们有$\lambda \frac{||W^l_i||_F^*}{||G_i^l||_F}<1$，因而我们能够用这个来进行裁剪，同时，现在新得到的权值矩阵为$W_{i_{new}}^l = W_i^l - h\lambda\frac{||W^l_i||_F^*}{||G_i^l||_F}G_i^l，h$为学习率，从这个式子可以看出，我们同时用超参数和权值范数比梯度范数来对梯度进行裁剪，而不是仅仅用超参数比梯度范数来进行裁剪，显然，采用这种方法就能够自适应地对不同层不同单元的权值矩阵进行梯度裁剪
+-->
+
 ---
 
 # 图像处理模型 NFNet
 ## 
 
-2. **AGC算法**：记 $W^l \in \mathbb{R}^{N*M}$ 为第 $l$ 层的权重矩阵, $G^l \in \mathbb{R}^{N*M}$为对应于$W^l$的梯度矩阵，$\| \cdot \|_F$ 表示 Frobenius 范数, 则有:
+2. **AGC（Adaptive Gradient Clipping）算法**：记 $W^\ell \in \mathbb{R}^{N*M}$ 为第 $\ell$ 层的权重矩阵, $G^\ell \in \mathbb{R}^{N*M}$为对应于$W^\ell$的梯度矩阵，$\| \cdot \|_F$ 表示 Frobenius 范数, 则有:
 
 
 $$
@@ -155,11 +167,19 @@ $$
 
 $$
 
+> Frobenius 范数是针对矩阵而言的，通俗来讲就是矩阵中的元素的平方和再开方。<br>
+> 对于向量而言就是 L2 范数
+
 <br>
 
-定义第 $l$ 层上第 $i$ 个单元的梯度矩阵为$G_i^l$  （表示 $G^l$ 的第 $i$ 行），$\lambda$ 是一个超参数，<br> $\| W_i \|_F^*=\max (\| W_i \|_F, \epsilon)$ ， $\epsilon$ 默认为 $10^{-3}$ ，AGC算法的裁剪公式为：
+
+定义第 $\ell$ 层上第 $i$ 个单元的梯度矩阵为$G_i^\ell$  （表示 $G^\ell$ 的第 $i$ 行），$\lambda$ 是一个超参数，<br> $\| W_i \|_F^*=\max (\| W_i \|_F, \epsilon)$ ， $\epsilon$ 默认为 $10^{-3}$ ，AGC算法的裁剪公式为：
 
 $$G_i^\ell\to\begin{cases}\lambda\frac{\|W_i^\ell\|_F^\star}{\|G_i^\ell\|_F}G_i^\ell,&\mathrm{if~}\frac{\|G_i^\ell\|_F}{\|W_i^\ell\|_F^\star}>\lambda,\\G_i^\ell,&\mathrm{otherwise}.\end{cases}$$
+
+<!--
+...从这个式子可以看出，我们同时用超参数和权值范数比梯度范数来对梯度进行裁剪，而不是仅仅用超参数比梯度范数来进行裁剪，显然，采用这种方法就能够自适应地对不同层不同单元的权值矩阵进行梯度裁剪
+-->
 
 ---
 
@@ -223,17 +243,17 @@ SBERT对预训练的BERT进行修改：
 
 基于此，我们采取**对两个模型得出的匹配结果取并集**的融合策略.
 
-对多个模型取并集也是一种正则化的形式（类似集成学习中的 bagging）.
+对多个模型取并集也是一种正则化的形式（类似集成学习中的 bagging）. 防止网络过拟合.
 
 <img src="/image-12.png" style="height: 65%; margin: auto; display: block;" />
 
 
 ---
 
-# Min2
+# 后处理-Min2
 ## 
 
-根据数据集的特性, 每个 label_group 的大小至少为 2 至多为 50.
+根据数据集的特性, 每个 label_group 的大小至少为 2.
 
 
 采用 Min2 原则：我们令最近的点被匹配，即使其未达到阈值 threshold.即强制每组大小至少为2.
@@ -250,7 +270,7 @@ idx = np.where(distances[k,] < threshold)[0] # 距离小于阈值为邻居，包
 
 ids = indices[k,idx] # 找到 k 的邻居，包括 k 自己
 
-if len(ids) <= 1 and distances[k,1] < min2_threshold: # 没有邻居，找最近一个
+if len(ids) <= 1 and distances[k,1] < min2_threshold: # 如果没有邻居，找最近一个
     ids = np.append(ids,indices[k,1])
 
 ~~~
@@ -261,31 +281,36 @@ if len(ids) <= 1 and distances[k,1] < min2_threshold: # 没有邻居，找最近
 
 本次项目 min2_threshold 取0.6较为合适.
 
+
 ---
 
-
-# Neighborhood Blendingneig
+# 后处理-Neighborhood Blending
 ## 
 
 
-使用近邻搜索和Min2阈值化得到图片的(matches, similarities)对，构造图，未通过阈值和Min2条件的节点不连接.
 
-利用邻域信息细化查询图片的嵌入向量，通过相似性加权求取邻域嵌入向量的和，添加到查询嵌入向量中，称为NB（Neighborhood Blending）, 该方法可以更有效地聚合同类点.
+利用邻域信息细化查询图片的嵌入向量，通过**相似性加权取邻域 embedding 的和**，添加到查询 embedding 中，称为NB（Neighborhood Blending）, 该方法可以更有效地聚合同类点.
+
+> 融合"邻居"的 embedding 可以加强与"邻居的邻居"的关系.
 
 <img src="/nbres.png" style="height: 65%; margin: auto; display: block;" />
 
+<!--
+接下来是NB，我们希望进一步缩小同类点的距离。 左边图... 为了解决这个问题我们将使用neighborhood blending
+-->
 
 ---
 
-# Neighborhood Blending
+# 后处理-Neighborhood Blending
 ## 
 
-<br>
-
+<br>使用近邻搜索和Min2阈值化得到图片的(matches, similarities)对，构造图，未通过阈值和Min2条件的节点不连接.
 <img src="/image-27.png"  />
+
+
 ---
 
-# 单位提取
+# 后处理-单位提取
 ## 
 
 在数据集中，我们发现部分数据图像一致，文本相似，但因为**单位**不同而导致失配.
@@ -300,6 +325,7 @@ if len(ids) <= 1 and distances[k,1] < min2_threshold: # 没有邻居，找最近
 <br>
 
 <img src="/image-26.png" style="height:50%; margin: auto; display: block;" />
+
 
 ---
 
@@ -386,10 +412,13 @@ layout: two-cols-header
 * 本次比赛使用 eca-NFNet 以及 sentence-transformers/paraphrase-xlm-r-multilingual-v1.
 * 本次比赛文本特征重要性略高于图像模型.
 
+
 ---
 
 # 总结体会
 ## 
+
+<v-clicks>
 
 * 模型的提升和调参并没有带来太大的提升.
 > Resnet18+Tfidf ➡️ NfNet-l1+SBERT(with Arcface),  0.762 ➡️ 0.768
@@ -401,19 +430,12 @@ layout: two-cols-header
 * 数据集较为嘈杂是限制 f1 分数的一个重要因素.
 > "...noisy data is expected as that is the real situation in E-commerce since sellers have their own method of marketing, naming and promoting their products."
 > ![Alt text](/image-33.png)
+</v-clicks>
 
----
+<!--
+像调参，数据增广等差别不大
+-->
 
-# 致谢
-## 
-
-<br>
-<br>
-<br>
-
-* 感谢文泉老师细心指导
-* 感谢 Kaggle 比赛讨论区各位大神 以及 github 用户jingxuanyang 的比赛总结
-* 感谢 ChatGPT, Github Copilot 等AI工具的帮助
 
 ---
 layout: cover
@@ -421,6 +443,5 @@ class: text-center
 background: https://plus.unsplash.com/premium_photo-1661421746164-b8b53de3bd4e?q=80&w=2370&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D
 ---
 
-# 感谢聆听
+# 感谢倾听
 #### 2023.11 第五小组
-
