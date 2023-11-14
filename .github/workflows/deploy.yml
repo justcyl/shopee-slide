@@ -33,7 +33,7 @@ jobs:
         run:  npm i -g @slidev/cli
 
       - name: Build
-        run: slidev build --base /sjopee-slide/
+        run: slidev build --base /shopee-slide/
 
       - uses: actions/configure-pages@v3
 
